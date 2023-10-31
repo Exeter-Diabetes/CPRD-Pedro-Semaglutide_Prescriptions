@@ -39,7 +39,7 @@ source("01.slade_aurum_set_data.R")
 dataset_formatted <- set_up_data_sglt2_glp1(dataset.type="full.cohort") %>%
   filter(drugsubstances %in% c("Dulaglutide", "Liraglutide", "Canagliflozin", "Dapagliflozin", "Empagliflozin", "Semaglutide")) %>%
   filter(!is.na(stopdrug_6m_3mFU)) %>%
-  filter(!is.na(prehba1c)) %>%
+  # filter(!is.na(prehba1c)) %>%
   # filter(!is.na(posthba1cfinal)) %>%
   mutate(drugclass = ifelse(drugclass == "SGLT2", "SGLT2i", "GLP1-RA"),
          drugclass = factor(drugclass, levels = c("SGLT2i", "GLP1-RA")),
@@ -74,12 +74,12 @@ lm.hba1c <- lm(formula = posthba1cfinal ~ drugsubstances + prehba1c + hba1cmonth
                weights = h.pscores$pw.weights$overlap)
 
 patient.prediction <- data.frame(
-  prehba1c = 66,
+  prehba1c = 75,
   drugsubstances = unique(dataset_formatted_hba1c$drugsubstances),
   hba1cmonth = 6
 )
 
-hba1c_estimates <- as.matrix(predict(lm.hba1c, patient.prediction, interval = "confidence") - 66) %>%
+hba1c_estimates <- as.matrix(predict(lm.hba1c, patient.prediction, interval = "confidence") - 75) %>%
   as.data.frame() %>%
   cbind(drugsubstances = patient.prediction$drugsubstances) %>%
   left_join(
@@ -111,14 +111,14 @@ lm.hba1c.sex <- lm(formula = posthba1cfinal ~ drugsubstances + prehba1c + hba1cm
                    weights = h.pscores$pw.weights$overlap)
 
 patient.prediction <- expand.grid(
-  prehba1c = 66,
+  prehba1c = 75,
   drugsubstances = unique(dataset_formatted_hba1c$drugsubstances),
   hba1cmonth = 6,
   sex = c("Male", "Female")
 )
 
 
-hba1c_estimates_sex <- as.matrix(predict(lm.hba1c.sex, patient.prediction, interval = "confidence") - 66) %>%
+hba1c_estimates_sex <- as.matrix(predict(lm.hba1c.sex, patient.prediction, interval = "confidence") - 75) %>%
   as.data.frame() %>%
   cbind(drugsubstances = patient.prediction$drugsubstances,
         sex = patient.prediction$sex) %>%
@@ -148,6 +148,7 @@ plot_hba1c_estimates_sex <- hba1c_estimates_sex %>%
         legend.position = "bottom")
 
 
+
 ###    Weight outcomes
 #:----------------------------------------------
 
@@ -167,12 +168,12 @@ lm.weight <- lm(formula = postweight6m ~ drugsubstances + preweight,
 
 
 patient.prediction <- data.frame(
-  preweight = 90,
+  preweight = 95,
   drugsubstances = unique(dataset_formatted_weight$drugsubstances)
 )
 
 
-weight_estimates <- as.matrix(predict(lm.weight, patient.prediction, interval = "confidence")-90) %>%
+weight_estimates <- as.matrix(predict(lm.weight, patient.prediction, interval = "confidence")-95) %>%
   as.data.frame() %>%
   cbind(drugsubstances = patient.prediction$drugsubstances) %>%
   left_join(
@@ -207,13 +208,13 @@ lm.weight.sex <- lm(formula = postweight6m ~ drugsubstances + preweight + drugsu
 
 
 patient.prediction <- expand.grid(
-  preweight = 90,
+  preweight = 95,
   drugsubstances = unique(dataset_formatted_weight$drugsubstances),
   sex = c("Male", "Female")
 )
 
 
-weight_estimates_sex <- as.matrix(predict(lm.weight.sex, patient.prediction, interval = "confidence")-90) %>%
+weight_estimates_sex <- as.matrix(predict(lm.weight.sex, patient.prediction, interval = "confidence")-95) %>%
   as.data.frame() %>%
   cbind(drugsubstances = patient.prediction$drugsubstances,
         sex = patient.prediction$sex) %>%
@@ -241,7 +242,6 @@ plot_weight_estimates_sex <- weight_estimates_sex %>%
   ) +
   theme(axis.title.x = element_blank(),
         legend.position = "bottom")
-
 
 
 
@@ -346,12 +346,10 @@ plot_weight_estimates_sex <- weight_estimates_sex %>%
 #:----------------------------------------------
 
 dataset_formatted_discontinuation <- dataset_formatted %>%
-  filter(!is.na(stopdrug_6m_3mFU)) %>%
-  filter(!is.na(prehba1c)) %>%
-  filter(!is.na(preweight))
+  filter(!is.na(stopdrug_6m_3mFU))
 
 
-d.pscores <- SumStat(ps.formula = drugsubstances ~ agetx + sex + t2dmduration + drugline + ncurrtx + prehba1c + preweight,
+d.pscores <- SumStat(ps.formula = drugsubstances ~ agetx + sex + t2dmduration + drugline + ncurrtx,
                      data = dataset_formatted_discontinuation,
                      weight = c("IPW", "overlap"))
 
@@ -439,6 +437,7 @@ plot_discontinuation_estimates_sex <- discontinuation_estimates_sex %>%
 
 
 
+
 ###############################################################################
 ###############################################################################
 ########################## Combine Results ####################################
@@ -477,6 +476,48 @@ plot_estimates
 plot_estimates_sex
 dev.off()
 
+
+
+
+# just hba1c
+
+patchwork::wrap_plots(
+  list(
+    plot_hba1c_estimates +
+      ggtitle("Average HbA1c response (baseline 75)") +
+      ylim(-14, -6), 
+    plot_hba1c_estimates_sex +
+      ggtitle("Average HbA1c response (baseline 75)") +
+      ylim(-14, -6)
+  )) &
+  theme(legend.position = "bottom")
+
+# just weight
+
+patchwork::wrap_plots(
+  list(
+    plot_weight_estimates +
+      ggtitle("Average weight response (baseline 95)") +
+      ylim(-7, -1), 
+    plot_weight_estimates_sex +
+      ggtitle("Average weight response (baseline 95)") +
+      ylim(-7, -1)
+  )) &
+  theme(legend.position = "bottom")
+
+
+# just discontinuation
+
+patchwork::wrap_plots(
+  list(
+    plot_discontinuation_estimates +
+      ggtitle("Average weight response (baseline 95)") +
+      scale_y_continuous(labels=percent, limits = c(0.13, 0.28)), 
+    plot_discontinuation_estimates_sex +
+      ggtitle("Average weight response (baseline 95)") +
+      scale_y_continuous(labels=percent, limits = c(0.13, 0.28))
+  )) &
+  theme(legend.position = "bottom")
 
 
 
