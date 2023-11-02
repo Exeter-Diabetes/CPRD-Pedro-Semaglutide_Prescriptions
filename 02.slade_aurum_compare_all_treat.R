@@ -37,10 +37,8 @@ source("01.slade_aurum_set_data.R")
 
 ## Load dataset
 dataset <- set_up_data_sglt2_glp1(dataset.type="full.cohort", diagnosis = FALSE) %>%
-  filter(drugsubstances %in% c("Dulaglutide", "Liraglutide", "Canagliflozin", "Dapagliflozin", "Empagliflozin", "Semaglutide")) %>%
+  filter(drugsubstances %in% c("Dulaglutide", "Liraglutide", "Canagliflozin", "Dapagliflozin", "Liraglutide", "Empagliflozin", "Semaglutide")) %>%
   filter(!is.na(stopdrug_6m_3mFU)) %>%
-  # filter(!is.na(prehba1c)) %>%
-  # filter(!is.na(posthba1cfinal)) %>%
   mutate(drugclass = ifelse(drugclass == "SGLT2", "SGLT2i", "GLP1-RA"),
          drugclass = factor(drugclass, levels = c("SGLT2i", "GLP1-RA")),
          ncurrtx = factor(ncurrtx, levels = c("1", "2", "3", "4", "5+"), labels = c("1", "2", "3", "4", "4")))

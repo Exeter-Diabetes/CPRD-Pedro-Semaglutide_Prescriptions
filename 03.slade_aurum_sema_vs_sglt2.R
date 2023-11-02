@@ -7,8 +7,7 @@
 ## Load libraries
 library(tidyverse)
 library(ggplot2)
-library(tableone)
-library(MatchIt)
+library(PSweight)
 library(patchwork)
 
 ## Set up directory path to save files (stagered to ensure folders are created)
@@ -47,10 +46,9 @@ source("01.slade_aurum_set_data.R")
 dataset <- set_up_data_sglt2_glp1(dataset.type="full.cohort") %>%
   filter(drugsubstances %in% c("Dulaglutide", "Liraglutide", "Canagliflozin", "Dapagliflozin", "Empagliflozin", "Semaglutide")) %>%
   filter(!is.na(stopdrug_6m_3mFU)) %>%
-  filter(!is.na(prehba1c)) %>%
-  filter(!is.na(posthba1cfinal)) %>%
   mutate(drugclass = ifelse(drugclass == "SGLT2", "SGLT2i", "GLP1-RA"),
-         drugclass = factor(drugclass, levels = c("SGLT2i", "GLP1-RA"))) %>%
+         drugclass = factor(drugclass, levels = c("SGLT2i", "GLP1-RA")),
+         ncurrtx = factor(ncurrtx, levels = c("1", "2", "3", "4", "5+"), labels = c("1", "2", "3", "4", "4"))) %>%
   filter(yrdrugstart > 2018)
 
 
@@ -65,10 +63,11 @@ dataset <- set_up_data_sglt2_glp1(dataset.type="full.cohort") %>%
 ###    HbA1c outcomes
 #:----------------------------------------------
 
-dataset_formatted_hba1c <- dataset_formatted %>%
+dataset_formatted_hba1c <- dataset %>%
   filter(!is.na(posthba1cfinal)) %>%
   filter(!is.na(prehba1c)) %>%
-  mutate(drugclass_study = ifelse(drugsubstances %in% c("Canagliflozin", "Dapagliflozin", "Empagliflozin"), "SGLT2i", drugsubstances),
+  mutate(drugclass_study = ifelse(drugsubstances %in% c("Canagliflozin", "Dapagliflozin", "Empagliflozin"), "SGLT2i", 
+                                  ifelse(drugsubstances %in% c("Dulaglutide", "Liraglutide"), "GLP1-RA", drugsubstances)),
          drugclass_study = factor(drugclass_study))
 
 
@@ -83,12 +82,12 @@ lm.hba1c <- lm(formula = posthba1cfinal ~ drugclass_study + prehba1c + hba1cmont
                weights = h.pscores$pw.weights$overlap)
 
 patient.prediction <- data.frame(
-  prehba1c = 66,
+  prehba1c = 75,
   drugclass_study = unique(dataset_formatted_hba1c$drugclass_study),
   hba1cmonth = 6
 )
 
-hba1c_estimates <- as.matrix(((predict(lm.hba1c, patient.prediction, interval = "confidence")/10.929) + 2.15) - ((66/10.929)+2.15)) %>%
+hba1c_estimates <- as.matrix(predict(lm.hba1c, patient.prediction, interval = "confidence") - 75) %>%
   as.data.frame() %>%
   cbind(drugclass_study = patient.prediction$drugclass_study) %>%
   left_join(
@@ -121,10 +120,10 @@ plot_hba1c_estimates <- hba1c_estimates %>%
 #:----------------------------------------------
 
 
-dataset_formatted_weight <- dataset_formatted %>%
+dataset_formatted_weight <- dataset %>%
   filter(!is.na(postweight6m)) %>%
   filter(!is.na(preweight)) %>%
-  mutate(drugclass_study = ifelse(drugsubstances %in% c("Canagliflozin", "Dapagliflozin", "Empagliflozin"), "SGLT2i",
+  mutate(drugclass_study = ifelse(drugsubstances %in% c("Canagliflozin", "Dapagliflozin", "Empagliflozin"), "SGLT2i", 
                                   ifelse(drugsubstances %in% c("Dulaglutide", "Liraglutide"), "GLP1-RA", drugsubstances)),
          drugclass_study = factor(drugclass_study))
 
@@ -136,18 +135,17 @@ w.pscores <- SumStat(ps.formula = drugclass_study ~ agetx + sex + t2dmduration +
 
 
 lm.weight <- lm(formula = postweight6m ~ drugclass_study + preweight,
-                data = dataset_formatted_weight %>%
-                  mutate(drugclass_study = factor(drugclass_study, levels = c("Semaglutide", "SGLT2i", "GLP1-RA"))),
+                data = dataset_formatted_weight,
                 weights = w.pscores$pw.weights$overlap)
 
 
 patient.prediction <- data.frame(
-  preweight = 90,
+  preweight = 95,
   drugclass_study = unique(dataset_formatted_weight$drugclass_study)
 )
 
 
-weight_estimates <- as.matrix(predict(lm.weight, patient.prediction, interval = "confidence")-90) %>%
+weight_estimates <- as.matrix(predict(lm.weight, patient.prediction, interval = "confidence")-95) %>%
   as.data.frame() %>%
   cbind(drugclass_study = patient.prediction$drugclass_study) %>%
   left_join(
@@ -175,21 +173,47 @@ plot_weight_estimates <- weight_estimates %>%
 
 
 
+lm.weight.sex <- lm(formula = postweight6m ~ drugclass_study + preweight + drugclass_study*sex,
+                    data = dataset_formatted_weight,
+                    weights = h.pscores$pw.weights$overlap)
+
+
+patient.prediction <- expand.grid(
+  preweight = 95,
+  drugclass_study = unique(dataset_formatted_weight$drugclass_study),
+  sex = c("Male", "Female")
+)
+
+
+weight_estimates_sex <- as.matrix(predict(lm.weight.sex, patient.prediction, interval = "confidence")-95) %>%
+  as.data.frame() %>%
+  cbind(drugclass_study = patient.prediction$drugclass_study,
+        sex = patient.prediction$sex) %>%
+  left_join(
+    dataset_formatted_weight %>%
+      select(drugclass_study, drugclass, sex) %>%
+      group_by(drugclass_study, sex) %>%
+      mutate(n.patients = n()) %>%
+      ungroup() %>%
+      unique(),
+    by = c("drugclass_study", "sex")
+  ) %>%
+  mutate(drugclass = factor(drugclass, levels = c("SGLT2i", "GLP1-RA")))
+
 
 ###    Discontinuation outcomes
 #:----------------------------------------------
 
 
-dataset_formatted_discontinuation <- dataset_formatted %>%
+dataset_formatted_discontinuation <- dataset %>%
   filter(!is.na(stopdrug_6m_3mFU)) %>%
-  filter(!is.na(prehba1c)) %>%
-  filter(!is.na(preweight)) %>%
-  mutate(drugclass_study = ifelse(drugsubstances %in% c("Canagliflozin", "Dapagliflozin", "Empagliflozin"), "SGLT2i", "GLP1-RA"),
+  mutate(drugclass_study = ifelse(drugsubstances %in% c("Canagliflozin", "Dapagliflozin", "Empagliflozin"), "SGLT2i", 
+                                  ifelse(drugsubstances %in% c("Dulaglutide", "Liraglutide"), "GLP1-RA", drugsubstances)),
          drugclass_study = factor(drugclass_study))
 
 
 
-d.pscores <- SumStat(ps.formula = drugclass_study ~ agetx + sex + t2dmduration + drugline + ncurrtx + prehba1c + preweight,
+d.pscores <- SumStat(ps.formula = drugclass_study ~ agetx + sex + t2dmduration + drugline + ncurrtx,
                      data = dataset_formatted_discontinuation,
                      weight = c("IPW", "overlap"))
 
@@ -225,7 +249,7 @@ plot_discontinuation_estimates <- discontinuation_estimates %>%
   geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.5) +
   facet_grid(~drugclass, scales = "free_x") +
   theme_bw() +
-  scale_y_continuous(labels=percent) +
+  scale_y_continuous(labels=scales::percent) +
   labs(
     y = "Adjusted Response (%)"
   ) +
