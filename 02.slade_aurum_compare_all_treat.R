@@ -196,6 +196,51 @@ plot_hba1c_estimates_sex <- hba1c_estimates_sex %>%
         legend.position = "bottom")
 
 
+#:---------
+#
+# Combine all values into one wide plot
+#
+
+plot_hba1c_estimates_wide <- hba1c_estimates_sex %>%
+  rbind(
+    hba1c_estimates %>%
+      mutate(sex = "Overall      ")
+  ) %>%
+  mutate(
+    sex = factor(sex, levels = c("Overall      ", "Male", "Female"), labels = c("Overall      ", "Male patient  ", "Female patient")),
+    drugclass = factor(drugclass, levels = c("SGLT2i", "GLP1-RA"), labels = c("SGLT2-inhibitors", "GLP-1 receptor agonists"))
+  ) %>%
+  ggplot(aes(x = drugsubstances, y = fit, colour = sex)) +
+  ylim(-20, -5) +
+  geom_point(position=position_dodge(width=0.8), size = 3) +
+  geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.3, position=position_dodge(width=0.8), size = 1.8) +
+  facet_grid(~drugclass, scales = "free_x") +
+  theme_bw() +
+  labs(
+    y = "Adjusted Response (mmol/mol)",
+    colour = ""
+  ) +
+  scale_colour_manual(values = c("black", "#56B4E9", "#E69F00")) +
+  theme(
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 35),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 25),
+    legend.title = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 27),
+    legend.position = "bottom"
+    )
+
+
+jpeg(height = 15, width = 80, units = "cm", res = 360, paste0(output_path, "/plot_hba1c_estimate_wide.jpeg"))
+plot_hba1c_estimates_wide
+dev.off()
+
+
+
+
+
 ###    Weight outcomes
 #:----------------------------------------------
 
@@ -289,6 +334,49 @@ plot_weight_estimates_sex <- weight_estimates_sex %>%
   ) +
   theme(axis.title.x = element_blank(),
         legend.position = "bottom")
+
+
+
+#:---------
+#
+# Combine all values into one wide plot
+#
+
+plot_weight_estimates_wide <- weight_estimates_sex %>%
+  rbind(
+    weight_estimates %>%
+      mutate(sex = "Overall      ")
+  ) %>%
+  mutate(
+    sex = factor(sex, levels = c("Overall      ", "Male", "Female"), labels = c("Overall      ", "Male patient  ", "Female patient")),
+    drugclass = factor(drugclass, levels = c("SGLT2i", "GLP1-RA"), labels = c("SGLT2-inhibitors", "GLP-1 receptor agonists"))
+  ) %>%
+  ggplot(aes(x = drugsubstances, y = fit, colour = sex)) +
+  geom_point(position=position_dodge(width=0.8), size = 3) +
+  geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.3, position=position_dodge(width=0.8), size = 1.8) +
+  facet_grid(~drugclass, scales = "free_x") +
+  theme_bw() +
+  labs(
+    y = "Adjusted Response (kg)",
+    colour = ""
+  ) +
+  scale_colour_manual(values = c("black", "#56B4E9", "#E69F00")) +
+  theme(
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 35),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 25),
+    legend.title = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 27),
+    legend.position = "bottom"
+  )
+
+
+jpeg(height = 15, width = 80, units = "cm", res = 360, paste0(output_path, "/plot_weight_estimate_wide.jpeg"))
+plot_weight_estimates_wide
+dev.off()
+
 
 
 
@@ -481,6 +569,49 @@ plot_discontinuation_estimates_sex <- discontinuation_estimates_sex %>%
   ) +
   theme(axis.title.x = element_blank(),
         legend.position = "bottom")
+
+
+
+#:---------
+#
+# Combine all values into one wide plot
+#
+
+plot_discontinuation_estimates_wide <- discontinuation_estimates_sex %>%
+  rbind(
+    discontinuation_estimates %>%
+      mutate(sex = "Overall      ")
+  ) %>%
+  mutate(
+    sex = factor(sex, levels = c("Overall      ", "Male", "Female"), labels = c("Overall      ", "Male patient  ", "Female patient")),
+    drugclass = factor(drugclass, levels = c("SGLT2i", "GLP1-RA"), labels = c("SGLT2-inhibitors", "GLP-1 receptor agonists"))
+  ) %>%
+  ggplot(aes(x = drugsubstances, y = fit, colour = sex)) +
+  geom_point(position=position_dodge(width=0.8), size = 3) +
+  geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.3, position=position_dodge(width=0.8), size = 1.8) +
+  facet_grid(~drugclass, scales = "free_x") +
+  theme_bw() +
+  scale_y_continuous(labels=percent, limits = c(0.12, 0.28), breaks = c(0.12, 0.16, 0.20, 0.24, 0.28)) +
+  labs(
+    y = "Adjusted Response (%)",
+    colour = ""
+  ) +
+  scale_colour_manual(values = c("black", "#56B4E9", "#E69F00")) +
+  theme(
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 35),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 25),
+    legend.title = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 27),
+    legend.position = "bottom"
+  )
+
+
+jpeg(height = 15, width = 80, units = "cm", res = 360, paste0(output_path, "/plot_discontinuation_estimate_wide.jpeg"))
+plot_discontinuation_estimates_wide
+dev.off()
 
 
 
