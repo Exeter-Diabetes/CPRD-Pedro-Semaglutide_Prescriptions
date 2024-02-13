@@ -296,7 +296,7 @@ plot_weight_estimates <- weight_estimates %>%
 
 lm.weight.sex <- lm(formula = postweight6m ~ drugsubstances + preweight + drugsubstances*sex,
                    data = dataset_formatted_weight,
-                   weights = h.pscores$pw.weights$overlap)
+                   weights = w.pscores$pw.weights$overlap)
 
 
 patient.prediction <- expand.grid(
@@ -491,8 +491,8 @@ d.pscores <- SumStat(ps.formula = drugsubstances ~ agetx + sex + t2dmduration + 
 
 
 lm.discontinuation <- lm(formula = stopdrug_6m_3mFU ~ drugsubstances,
-              data = dataset_formatted_discontinuation,
-              weights = w.pscores$pw.weights$overlap)
+                         data = dataset_formatted_discontinuation,
+                         weights = d.pscores$pw.weights$overlap)
 
 
 patient.prediction <- data.frame(
@@ -530,8 +530,8 @@ plot_discontinuation_estimates <- discontinuation_estimates %>%
 
 
 lm.discontinuation.sex <- lm(formula = stopdrug_6m_3mFU ~ drugsubstances + drugsubstances*sex,
-                  data = dataset_formatted_discontinuation,
-                  weights = h.pscores$pw.weights$overlap)
+                             data = dataset_formatted_discontinuation,
+                             weights = d.pscores$pw.weights$overlap)
 
 
 patient.prediction <- expand.grid(
@@ -593,7 +593,7 @@ plot_discontinuation_estimates_wide <- discontinuation_estimates_sex %>%
   theme_bw() +
   scale_y_continuous(labels=percent, limits = c(0.12, 0.28), breaks = c(0.12, 0.16, 0.20, 0.24, 0.28)) +
   labs(
-    y = "Adjusted Response (%)",
+    y = "Adjusted Response",
     colour = ""
   ) +
   scale_colour_manual(values = c("black", "#56B4E9", "#E69F00")) +
